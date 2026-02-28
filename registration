@@ -2,13 +2,11 @@
 include_once 'connectdb.php';
 session_start();
 
-if(!isset($_SESSION['useremail']) || $_SESSION['role'] != "Admin"){
-    header('location:../index.php');
-    exit;
-}
+// Check if user is Admin
+$isAdmin = isset($_SESSION['useremail']) && $_SESSION['role'] === "Admin";
 
-/* DELETE */
-if(isset($_GET['delete'])){
+/* DELETE (only Admins) */
+if($isAdmin && isset($_GET['delete'])){
     $delete_id = $_GET['delete'];
     $delete = $pdo->prepare("DELETE FROM tbl_user WHERE userid=:id");
     $delete->bindParam(':id', $delete_id);
@@ -19,9 +17,9 @@ if(isset($_GET['delete'])){
     }
 }
 
-/* EDIT FETCH */
+/* EDIT FETCH (only Admins) */
 $edit_mode = false;
-if(isset($_GET['edit'])){
+if($isAdmin && isset($_GET['edit'])){
     $edit_id = $_GET['edit'];
     $edit = $pdo->prepare("SELECT * FROM tbl_user WHERE userid=:id");
     $edit->bindParam(':id', $edit_id);
@@ -55,6 +53,11 @@ if(isset($_POST['btnsave'])){
     }
 
     if(isset($_POST['userid']) && !empty($_POST['userid'])){
+        // Only Admins can update users
+        if(!$isAdmin){
+            echo "<script>alert('You are not allowed to edit users.'); window.location='registration.php';</script>";
+            exit;
+        }
 
         if($imgName != null){
             $update = $pdo->prepare("UPDATE tbl_user SET 
@@ -84,7 +87,7 @@ if(isset($_POST['btnsave'])){
         }
 
     } else {
-
+        // Anyone can register
         $check = $pdo->prepare("SELECT * FROM tbl_user WHERE useremail=:email");
         $check->bindParam(':email', $useremail);
         $check->execute();
@@ -92,7 +95,6 @@ if(isset($_POST['btnsave'])){
         if($check->rowCount() > 0){
             echo "<script>alert('This email is already registered.');</script>";
         } else {
-
             if($imgName == null){ $imgName = "default.png"; }
 
             $insert = $pdo->prepare("INSERT INTO tbl_user 
@@ -229,6 +231,7 @@ table tbody tr:nth-child(even){
 </form>
 </div>
 
+<?php if($isAdmin): ?>
 <div id="usersTable" style="<?php echo $edit_mode ? 'display:none;' : 'display:block;'; ?>">
 
 <table>
@@ -279,6 +282,7 @@ echo "<tr>
 </table>
 
 </div>
+<?php endif; ?>
 
 </div>
 </div>
@@ -286,8 +290,10 @@ echo "<tr>
 <script>
 document.getElementById("showRegisterForm").addEventListener("click", function() {
     document.getElementById("registerForm").style.display = "block";
+    <?php if($isAdmin): ?>
     document.getElementById("usersTable").style.display = "none";
+    <?php endif; ?>
 });
 </script>
 
-<?php include 'footer.php'; ?> 
+<?php include 'footer.php'; ?>
