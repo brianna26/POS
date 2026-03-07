@@ -2,8 +2,6 @@
 include_once 'connectdb.php';
 session_start();
 
-include_once "header.php";
-
 if(isset($_POST['btnsave'])) {
     $category = $_POST['txtcategory'];
     $vat      = $_POST['txtvat'];
@@ -63,6 +61,8 @@ if(isset($_POST['btndelete'])) {
     header('location:category.php');
     exit();
 }
+
+include_once "header.php";
 ?>
 
 <!-- Content Wrapper -->
