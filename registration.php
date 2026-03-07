@@ -22,17 +22,6 @@ if($isAdmin && isset($_GET['delete'])){
     }
 }
 
-/* EDIT FETCH (only Admins) */
-$edit_mode = false;
-if($isAdmin && isset($_GET['edit'])){
-    $edit_id = $_GET['edit'];
-    $edit = $pdo->prepare("SELECT * FROM tbl_user WHERE userid=:id");
-    $edit->bindParam(':id', $edit_id);
-    $edit->execute();
-    $edit_user = $edit->fetch(PDO::FETCH_ASSOC);
-    if($edit_user){ $edit_mode = true; }
-}
-
 /* INSERT / UPDATE */
 if(isset($_POST['btnsave'])){
 
@@ -147,195 +136,279 @@ if(isset($_POST['btnsave'])){
 include_once "header.php";
 ?>
 
+<!-- Content Wrapper -->
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-12">
+                    <h1 class="m-0">User Registration</h1>
+                    <hr>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="container-fluid">
+            <div class="card card-primary card-outline">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="m-0"><i class="fas fa-users mr-2"></i>User List</h5>
+                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addUserModal">
+                        <i class="fas fa-user-plus mr-1"></i> Register New User
+                    </button>
+                </div>
+                <div class="card-body">
+                    <?php if($isAdmin): ?>
+                    <table id="table_users" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Edit</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                        $stmt = $pdo->prepare("SELECT userid, username, useremail, role, userimage, useraddress, userage, usercontact, userpassword FROM tbl_user ORDER BY userid DESC");
+                        $stmt->execute();
+                        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        foreach($users as $user):
+                            $imagePath = !empty($user['userimage']) && file_exists("uploads/".$user['userimage'])
+                                ? "uploads/".$user['userimage']
+                                : "uploads/default.png";
+                            $roleBadge = $user['role'] === 'Admin' ? 'badge-danger' : 'badge-info';
+                        ?>
+                        <tr>
+                            <td><?php echo $user['userid']; ?></td>
+                            <td>
+                                <img src="<?php echo $imagePath; ?>" class="img-circle elevation-1" width="40" height="40" style="object-fit:cover;" alt="User Image">
+                            </td>
+                            <td><?php echo htmlspecialchars($user['username']); ?></td>
+                            <td><?php echo htmlspecialchars($user['useremail']); ?></td>
+                            <td><span class="badge <?php echo $roleBadge; ?>"><?php echo $user['role']; ?></span></td>
+                            <td>
+                                <button type="button" class="btn btn-info btn-sm btn-edit-user"
+                                    data-id="<?php echo $user['userid']; ?>"
+                                    data-name="<?php echo htmlspecialchars($user['username']); ?>"
+                                    data-email="<?php echo htmlspecialchars($user['useremail']); ?>"
+                                    data-password="<?php echo htmlspecialchars($user['userpassword']); ?>"
+                                    data-address="<?php echo htmlspecialchars($user['useraddress']); ?>"
+                                    data-age="<?php echo $user['userage']; ?>"
+                                    data-contact="<?php echo htmlspecialchars($user['usercontact']); ?>"
+                                    data-role="<?php echo $user['role']; ?>"
+                                    data-image="<?php echo $imagePath; ?>"
+                                    data-toggle="modal" data-target="#editUserModal">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-danger btn-sm btn-delete-user" data-id="<?php echo $user['userid']; ?>">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php else: ?>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-lock mr-2"></i> Only administrators can view the user list.
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== ADD USER MODAL ===================== -->
+<div class="modal fade" id="addUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form action="" method="post" enctype="multipart/form-data">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white">
+                        <i class="fas fa-user-plus mr-2"></i>Register New User
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Full Name</label>
+                            <input type="text" class="form-control" name="txtname" placeholder="Full name" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Email Address</label>
+                            <input type="email" class="form-control" name="txtemail" placeholder="Email" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Password</label>
+                            <input type="password" class="form-control" name="txtpassword" placeholder="Password" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Address</label>
+                            <input type="text" class="form-control" name="txtaddress" placeholder="Address" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Age</label>
+                            <input type="number" class="form-control" name="txtage" placeholder="Age" min="1" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Contact Number</label>
+                            <input type="text" class="form-control" name="txtcontact" placeholder="Contact no." required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Role</label>
+                            <select class="form-control" name="txtrole" required>
+                                <option value="">Select Role</option>
+                                <option value="Admin">Admin</option>
+                                <option value="User">User</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Profile Image <small class="text-muted">(optional)</small></label>
+                        <input type="file" class="form-control-file" name="txtimage" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" name="btnsave">
+                        <i class="fas fa-save mr-1"></i>Save User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== EDIT USER MODAL ===================== -->
+<div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form action="" method="post" enctype="multipart/form-data">
+                <div class="modal-header bg-info">
+                    <h5 class="modal-title text-white">
+                        <i class="fas fa-user-edit mr-2"></i>Edit User
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="userid" id="edit_userid">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Full Name</label>
+                            <input type="text" class="form-control" name="txtname" id="edit_name" placeholder="Full name" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Email Address</label>
+                            <input type="email" class="form-control" name="txtemail" id="edit_email" placeholder="Email" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Password</label>
+                            <input type="password" class="form-control" name="txtpassword" id="edit_password" placeholder="Password" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Address</label>
+                            <input type="text" class="form-control" name="txtaddress" id="edit_address" placeholder="Address" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Age</label>
+                            <input type="number" class="form-control" name="txtage" id="edit_age" placeholder="Age" min="1" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Contact Number</label>
+                            <input type="text" class="form-control" name="txtcontact" id="edit_contact" placeholder="Contact no." required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Role</label>
+                            <select class="form-control" name="txtrole" id="edit_role" required>
+                                <option value="">Select Role</option>
+                                <option value="Admin">Admin</option>
+                                <option value="User">User</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Profile Image <small class="text-muted">(leave blank to keep current)</small></label>
+                        <div class="d-flex align-items-center">
+                            <img id="edit_img_preview" src="" class="img-circle mr-3" width="45" height="45" style="object-fit:cover; border:2px solid #ddd;" alt="Current">
+                            <input type="file" class="form-control-file" name="txtimage" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info" name="btnsave">
+                        <i class="fas fa-save mr-1"></i>Update User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<?php include 'footer.php'; ?>
+
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<style>
-body{
-    background:#f4f6f9;
-    font-family: 'Segoe UI', sans-serif;
-}
-.card-box{
-    background:#fff;
-    padding:25px;
-    border-radius:12px;
-    box-shadow:0 4px 15px rgba(0,0,0,0.08);
-}
-.btn-main{
-    background:#007bff;
-    color:#fff;
-    padding:10px 18px;
-    border:none;
-    border-radius:6px;
-}
-.btn-success{
-    background:#28a745;
-    color:#fff;
-    border:none;
-    padding:6px 12px;
-    border-radius:6px;
-}
-.btn-danger{
-    background:#dc3545;
-    color:#fff;
-    border:none;
-    padding:6px 12px;
-    border-radius:6px;
-}
-input, select{
-    width:100%;
-    padding:10px;
-    border:1px solid #ddd;
-    border-radius:6px;
-    margin-bottom:12px;
-}
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-table thead{
-    background:#007bff;
-    color:#fff;
-}
-table th, table td{
-    padding:12px;
-    text-align:center;
-}
-table tbody tr:nth-child(even){
-    background:#f9f9f9;
-}
-.user-img{
-    width:45px;
-    height:45px;
-    border-radius:50%;
-    object-fit:cover;
-    border:2px solid #ddd;
-}
-</style>
-
-<div class="content-wrapper" style="padding:25px;">
-<div class="card-box">
-
-<h3>User Registration Management</h3>
-
-<button id="showRegisterForm" class="btn-main">+ Register New User</button>
-
-<br><br>
-
-<div id="registerForm" style="<?php echo $edit_mode ? 'display:block;' : 'display:none;'; ?>">
-
-<form method="POST" enctype="multipart/form-data">
-
-<input type="hidden" name="userid" value="<?php if($edit_mode) echo $edit_user['userid']; ?>">
-
-<input type="text" name="txtname" placeholder="Full Name" required value="<?php if($edit_mode) echo $edit_user['username']; ?>">
-<input type="email" name="txtemail" placeholder="Email Address" required value="<?php if($edit_mode) echo $edit_user['useremail']; ?>">
-<input type="password" name="txtpassword" placeholder="Password" required value="<?php if($edit_mode) echo $edit_user['userpassword']; ?>">
-<input type="text" name="txtaddress" placeholder="Address" required value="<?php if($edit_mode) echo $edit_user['useraddress']; ?>">
-<input type="number" name="txtage" placeholder="Age" required value="<?php if($edit_mode) echo $edit_user['userage']; ?>">
-<input type="text" name="txtcontact" placeholder="Contact Number" required value="<?php if($edit_mode) echo $edit_user['usercontact']; ?>">
-
-<select name="txtrole" required>
-<option value="">Select Role</option>
-<option value="Admin" <?php if($edit_mode && $edit_user['role']=="Admin") echo "selected"; ?>>Admin</option>
-<option value="User" <?php if($edit_mode && $edit_user['role']=="User") echo "selected"; ?>>User</option>
-</select>
-
-<input type="file" name="txtimage">
-
-<button type="submit" name="btnsave" class="btn-success">
-<?php echo $edit_mode ? "Update User" : "Save User"; ?>
-</button>
-
-<a href="registration.php" class="btn-danger" style="text-decoration:none;">Cancel</a>
-
-</form>
-</div>
-
-<?php if($isAdmin): ?>
-<div id="usersTable" style="<?php echo $edit_mode ? 'display:none;' : 'display:block;'; ?>">
-
-<table>
-<thead>
-<tr>
-<th>ID</th>
-<th>Image</th>
-<th>Name</th>
-<th>Email</th>
-<th>Role</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-
-<?php
-$stmt = $pdo->prepare("SELECT userid, username, useremail, role, userimage FROM tbl_user ORDER BY userid DESC");
-$stmt->execute();
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-foreach($users as $user){
-
-$imagePath = !empty($user['userimage']) && file_exists("uploads/".$user['userimage'])
-    ? "uploads/".$user['userimage']
-    : "uploads/default.png";
-
-echo "<tr>
-<td>{$user['userid']}</td>
-<td><img src='{$imagePath}' class='user-img'></td>
-<td>{$user['username']}</td>
-<td>{$user['useremail']}</td>
-<td>{$user['role']}</td>
-<td>
-<div class='btn-group'>
-<a href='registration.php?edit={$user['userid']}' class='btn btn-success btn-xs' role='button'>
-<span class='fa fa-edit' data-toggle='tooltip' title='Edit User'></span>
-</a>
-<a href='#' onclick='confirmDelete({$user['userid']})' class='btn btn-danger btn-xs' role='button'>
-<span class='fa fa-trash' data-toggle='tooltip' title='Delete User'></span>
-</a>
-</div>
-</td>
-</tr>";
-}
-?>
-
-</tbody>
-</table>
-
-</div>
-<?php endif; ?>
-
-</div>
-</div>
-
 <script>
-// Show register form
-document.getElementById("showRegisterForm").addEventListener("click", function() {
-    document.getElementById("registerForm").style.display = "block";
-    <?php if($isAdmin): ?>
-    document.getElementById("usersTable").style.display = "none";
-    <?php endif; ?>
+$(document).ready(function() {
+
+    // Fill edit modal
+    $('.btn-edit-user').on('click', function() {
+        $('#edit_userid').val($(this).data('id'));
+        $('#edit_name').val($(this).data('name'));
+        $('#edit_email').val($(this).data('email'));
+        $('#edit_password').val($(this).data('password'));
+        $('#edit_address').val($(this).data('address'));
+        $('#edit_age').val($(this).data('age'));
+        $('#edit_contact').val($(this).data('contact'));
+        $('#edit_role').val($(this).data('role'));
+        $('#edit_img_preview').attr('src', $(this).data('image'));
+    });
+
+    // Delete confirmation
+    $('.btn-delete-user').on('click', function() {
+        var userId = $(this).data('id');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'This user will be permanently deleted!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'registration.php?delete=' + userId;
+            }
+        });
+    });
+
 });
 
-// Smooth SweetAlert Delete Confirmation
-function confirmDelete(id){
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "This user will be deleted!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = 'registration.php?delete=' + id;
-        }
-    });
-}
-
-// Show SweetAlert for session flash messages
+// SweetAlert flash messages
 <?php if(isset($_SESSION['status'])): ?>
 Swal.fire({
     icon: '<?php echo $_SESSION['status']['type']; ?>',
@@ -348,5 +421,3 @@ Swal.fire({
 });
 <?php unset($_SESSION['status']); endif; ?>
 </script>
-
-<?php include 'footer.php'; ?>
